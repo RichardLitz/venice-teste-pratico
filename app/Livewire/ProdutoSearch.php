@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Livewire;
+namespace App\Livewire;
 
 use App\Models\Produto;
 use App\Models\Categoria;
@@ -17,6 +17,7 @@ class ProdutoSearch extends Component
     public $marcas = [];
     public $selectedCategorias = [];
     public $selectedMarcas = [];
+    public $categoriaSearch = ''; // Novo campo para busca de categoria
     
     // Parâmetros para persistência na URL
     protected $queryString = [
@@ -32,29 +33,44 @@ class ProdutoSearch extends Component
         $this->marcas = Marca::orderBy('nome')->get();
     }
 
-    public function updatingSearchTerm()
+    public function updated($property)
     {
+        // Resetar a página quando qualquer filtro for alterado
         $this->resetPage();
+        
+        // Se estiver pesquisando categoria e tiver menos de 3 caracteres, limpa a seleção
+        if ($property === 'categoriaSearch' && strlen($this->categoriaSearch) < 3) {
+            $this->selectedCategorias = [];
+        }
     }
 
-    public function updatingSelectedCategorias()
+    public function updatedCategoriaSearch($value)
     {
-        $this->resetPage();
-    }
-
-    public function updatingSelectedMarcas()
-    {
-        $this->resetPage();
+        if (strlen($value) >= 3) {
+            $this->categorias = Categoria::where('nome', 'like', '%' . $value . '%')
+                ->orderBy('nome')
+                ->get();
+        } else {
+            $this->categorias = Categoria::orderBy('nome')->get();
+        }
     }
 
     public function limparFiltros()
     {
-        $this->searchTerm = '';
-        $this->selectedCategorias = [];
-        $this->selectedMarcas = [];
+        // Reseta todas as propriedades de filtro
+        $this->reset(['searchTerm', 'selectedCategorias', 'selectedMarcas', 'categoriaSearch']);
+        
+        // Recarrega as listas completas de categorias e marcas
+        $this->categorias = Categoria::orderBy('nome')->get();
+        $this->marcas = Marca::orderBy('nome')->get();
+        
+        // Força o reset da página
         $this->resetPage();
+        
+        // Emite um evento para limpar a URL
+        $this->dispatch('filtrosLimpos');
     }
-
+    
     public function render()
     {
         $query = Produto::query();
